@@ -2,9 +2,9 @@
 
 #Change these to change the configuration of the private host network
 # IP address of the host on the private VM network
-B2D_HOST='172.16.0.1'
+B2D_HOST='192.168.59.3'
 # IP address of the boot2docker VM on the private host network
-B2D_IP='172.16.0.11'
+B2D_IP='192.168.59.103'
 
 # The below ranges are the defaults of Docker and Kubernetes.
 # This script does not change the configuration of either program so don't change these.
@@ -16,8 +16,6 @@ KUBE_RANGE='172.30.17.0/24'
 # Bootup script added to boot2docker VM.
 bootlocal_script=$(cat <<-SCRIPTEND
 	#!/bin/sh
-	ifconfig eth1 $B2D_IP netmask 255.255.255.0
-
 	/etc/init.d/docker restart
 
 	docker pull skynetservices/skydns:latest
@@ -64,7 +62,7 @@ VBoxManage list vms | grep boot2docker-vm > /dev/null 2>&1
 if [ $? == 1 ]; # VM does not exist
 then
   printf "*** boot2docker-vm not found. Creating ... "
-  boot2docker init --dhcp=false --hostip=$B2D_HOST > /dev/null 2>&1
+  boot2docker init --dhcp=false --hostip=$B2D_HOST --lowerip=$B2D_IP --upperip=$B2D_IP > /dev/null 2>&1
   printOK
 else
   echo "*** Found existing boot2docker-vm. Remove it (boot2docker destroy) and rerun this script if docker is acting odd."

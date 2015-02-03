@@ -79,6 +79,27 @@ printf "Address of VM eth0 is $B2D_ETH0\n"
 
 printf "*** Setting up config at $HOME/.kube ... "
 mkdir -p $HOME/.kube
+cat >> $HOME/.kube/kubeconfig <<-SCRIPTEND
+  apiVersion: v1
+  clusters:
+  - cluster:
+      certificate-authority: $HOME/.kube/admin/root.crt
+      server: https://$B2D_ETH0:8443
+    name: master
+  contexts:
+  - context:
+      cluster: master
+      user: admin
+    name: master-admin
+  current-context: master-admin
+  kind: Config
+  preferences: {}
+  users:
+  - name: admin
+    user:
+      client-certificate: $HOME/.kube/admin/cert.crt
+      client-key: $HOME/.kube/admin/key.key
+SCRIPTEND
 printOK
 
 printf "*** Writing startup script ... "
@@ -113,7 +134,7 @@ echo "--- boot2docker configured and started ---"
 echo ""
 echo "Please add the following to .bash_profile:"
 boot2docker shellinit
-echo "    export KUBECONFIG=$HOME/.kube/admin/.kubeconfig"
+echo "    export KUBECONFIG=$HOME/.kube/kubeconfig"
 echo "    alias dockup='boot2docker up && sudo route -n add $DOCKER_RANGE $B2D_IP && sudo route -n add $KUBE_RANGE $B2D_IP && sudo route -n add $B2D_ETH0 $B2D_IP'"
 echo ""
 echo "After rebooting, use the 'dockup' command to start the boot2docker VM.  This will re-initialize the required routes."

@@ -28,7 +28,7 @@ bootlocal_script=$(cat <<-SCRIPTEND
 	docker rm openshift skydns
 
 	docker run -d --name openshift -v /var/run/docker.sock:/var/run/docker.sock \\
-	--net=host --privileged openshift/origin start
+	--net=host --privileged -v $HOME/.kube:/var/lib/openshift/openshift.local.certificates openshift/origin start
 
 	docker run -d --name skydns --net=host skynetservices/skydns -kubernetes \\
 	-master=http://localhost:8080 -addr=$B2D_IP:53 -nameservers=\$NAMESERVERS -domain=docker
@@ -72,8 +72,13 @@ printf "*** Booting boot2docker-vm ... "
 boot2docker up > /dev/null 2>&1
 printOK
 
-printf "*** Configuring eth1 to $B2D_IP ... "
-boot2docker ssh "sudo ifconfig eth1 $B2D_IP netmask 255.255.255.0"
+printf "*** Getting IP address ... "
+B2D_ETH0=$(boot2docker ssh ifconfig eth0 | awk -F"[: ]+" '/inet addr:/ {print $4}')
+printOK
+printf "Address of VM eth0 is $B2D_ETH0\n"
+
+printf "*** Setting up config at $HOME/.kube ... "
+mkdir -p $HOME/.kube
 printOK
 
 printf "*** Writing startup script ... "
@@ -92,10 +97,11 @@ printOK
 printf "*** Setting up route from this host to containers ... "
 sudo route -n add $DOCKER_RANGE $B2D_IP > /dev/null 2>&1
 [ $? = 0 ] && sudo route -n add $KUBE_RANGE $B2D_IP > /dev/null 2>&1
+[ $? = 0 ] && sudo route -n add $B2D_ETH0 $B2D_IP > /dev/null 2>&1
 printOK
 
 printf "*** Configuring DNS client to resolve .docker hostnames ... "
-sudo echo "nameserver $B2D_IP" > /etc/resolver/docker
+sudo sh -c "mkdir -p /etc/resolver && echo \"nameserver $B2D_IP\" > /etc/resolver/docker"
 printOK
 
 printf "*** Restarting VM ... "
@@ -107,7 +113,7 @@ echo "--- boot2docker configured and started ---"
 echo ""
 echo "Please add the following to .bash_profile:"
 boot2docker shellinit
-echo "    export KUBERNETES_MASTER=$B2D_IP:8080"
-echo "    alias dockup='boot2docker up && sudo route -n add $DOCKER_RANGE $B2D_IP && sudo route -n add $KUBE_RANGE $B2D_IP'"
+echo "    export KUBECONFIG=$HOME/.kube/admin/.kubeconfig"
+echo "    alias dockup='boot2docker up && sudo route -n add $DOCKER_RANGE $B2D_IP && sudo route -n add $KUBE_RANGE $B2D_IP && sudo route -n add $B2D_ETH0 $B2D_IP'"
 echo ""
 echo "After rebooting, use the 'dockup' command to start the boot2docker VM.  This will re-initialize the required routes."

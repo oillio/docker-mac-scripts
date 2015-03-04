@@ -18,6 +18,13 @@ bootlocal_script=$(cat <<-SCRIPTEND
 	#!/bin/sh
 	/etc/init.d/docker restart
 
+	# ensure docker is up and running first
+    for i in {1..5}
+    do
+      docker ps && break
+      sleep 1
+    done
+
 	docker pull skynetservices/skydns:k8sfix
 	docker pull openshift/origin:v0.2.2
 

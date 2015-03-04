@@ -18,8 +18,8 @@ bootlocal_script=$(cat <<-SCRIPTEND
 	#!/bin/sh
 	/etc/init.d/docker restart
 
-	docker pull skynetservices/skydns:latest
-	docker pull openshift/origin:latest
+	docker pull skynetservices/skydns:k8sfix
+	docker pull openshift/origin:v0.2.2
 
 	# get current nameservers as a comma seperated list
 	NAMESERVERS=\`grep ^nameserver /etc/resolv.conf | awk '{ print \$2":53" }' | sed 's/,$/\n/'\`
@@ -28,10 +28,10 @@ bootlocal_script=$(cat <<-SCRIPTEND
 	docker rm openshift skydns
 
 	docker run -d --name openshift -v /var/run/docker.sock:/var/run/docker.sock \\
-	--net=host --privileged -v $HOME/.kube:/var/lib/openshift/openshift.local.certificates openshift/origin start
+	--net=host --privileged -v $HOME/.kube:/var/lib/openshift/openshift.local.certificates openshift/origin:v0.2.2 start
 
-	docker run -d --name skydns --net=host skynetservices/skydns -kubernetes \\
-	-master=http://localhost:8080 -addr=$B2D_IP:53 -nameservers=\$NAMESERVERS -domain=docker
+	docker run -d --name skydns --net=host skynetservices/skydns:k8sfix -kubernetes \\
+	-master=https://localhost:8443 -insecure_skip_tls_verify -addr=$B2D_IP:53 -nameservers=\$NAMESERVERS -domain=docker
 SCRIPTEND
 )
 # boot2docker profile script used to configure docker daemon
